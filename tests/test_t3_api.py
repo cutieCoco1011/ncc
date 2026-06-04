@@ -19,7 +19,10 @@ def test_health_providers_and_project_creation(tmp_path: Path) -> None:
     payload = response.json()
     assert payload["project_id"]
     assert payload["artifact_status"]["analysis"] == "missing"
-    assert client.get("/projects").json()[0]["title"] == "데모"
+    listed = client.get("/projects").json()[0]
+    assert listed["title"] == "데모"
+    assert listed["created_at"]
+    assert listed["updated_at"]
 
 
 def test_api_artifact_edit_selection_lettering_and_file_flow(tmp_path: Path) -> None:

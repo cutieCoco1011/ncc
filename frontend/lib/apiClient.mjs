@@ -43,6 +43,14 @@ export async function fetchArtifacts(projectId, baseUrl = DEFAULT_BASE_URL) {
   return response.json();
 }
 
+export async function listProjects(baseUrl = DEFAULT_BASE_URL) {
+  const response = await fetch(`${baseUrl}/projects`);
+  if (!response.ok) {
+    throw new Error(`list projects failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function selectBackendCandidate(projectId, candidateId, baseUrl = DEFAULT_BASE_URL) {
   const response = await fetch(`${baseUrl}/projects/${projectId}/candidates/${candidateId}/select`, {
     method: "POST"

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchArtifacts,
   latestExportUrl,
+  listProjects,
   patchBackendCharacter,
   patchBackendStoryboard,
   runBackendExport,
@@ -53,6 +54,27 @@ export default function CreatorPage() {
       setExportUrl(latestExportUrl(result.project_id));
       await loadBackendArtifacts(result.project_id);
       setStatus(`export ready: ${result.export_width}x${result.export_height}`);
+    } catch (error) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openLatestProject() {
+    setBusy(true);
+    setStatus("loading latest project");
+    try {
+      const projects = await listProjects();
+      if (!projects.length) {
+        setStatus("no backend projects found");
+        return;
+      }
+      const [latest] = [...projects].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      setProjectId(latest.project_id);
+      setExportUrl(latestExportUrl(latest.project_id));
+      await loadBackendArtifacts(latest.project_id);
+      setStatus(`loaded ${latest.title}`);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -170,6 +192,7 @@ export default function CreatorPage() {
           setSource={setSource}
           regenerateMock={regenerateMock}
           runBackendGoldPath={runBackendGoldPath}
+          openLatestProject={openLatestProject}
           busy={busy}
           status={status}
         />
@@ -202,13 +225,14 @@ export default function CreatorPage() {
   );
 }
 
-function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, busy, status }) {
+function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, openLatestProject, busy, status }) {
   return (
     <section className="pane source-pane">
       <div className="pane-title">
         <h2>소스</h2>
         <div className="button-row">
           <button onClick={regenerateMock} disabled={busy}>mock</button>
+          <button onClick={openLatestProject} disabled={busy}>latest</button>
           <button onClick={runBackendGoldPath} disabled={busy}>backend</button>
         </div>
       </div>

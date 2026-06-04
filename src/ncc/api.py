@@ -133,6 +133,8 @@ def create_app(projects_root: Path | str | None = None) -> FastAPI:
                 "project_id": context.project_id,
                 "title": context.manifest.title,
                 "project_dir": str(context.project_dir),
+                "created_at": context.manifest.created_at.isoformat(),
+                "updated_at": context.manifest.updated_at.isoformat(),
             }
             for context in orchestrator.storage.list_projects()
         ]
