@@ -63,6 +63,7 @@ test("artifact hydration uses persisted lettering and backend invalidation", () 
           qa_status: "pass",
           selected: true,
           image_path: "images/p1_candidate_1.png",
+          provider_metadata: { provider: "novelai", model: "nai-diffusion-3" },
           prompt: { base_prompt: "rain" }
         }
       ]
@@ -81,6 +82,8 @@ test("artifact hydration uses persisted lettering and backend invalidation", () 
   const workflow = workflowFromArtifacts(artifacts, "demo");
   assert.equal(workflow.panels[0].dialogue, "저장된 말풍선");
   assert.equal(workflow.invalidation.panel_specs, true);
+  assert.equal(workflow.candidates[0].provider, "novelai");
+  assert.equal(workflow.candidates[0].model, "nai-diffusion-3");
   assert.ok(workflow.candidates[0].imageUrl.includes("/projects/demo/files/images/p1_candidate_1.png"));
 });
 

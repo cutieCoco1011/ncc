@@ -319,6 +319,7 @@ function CandidatePanel({ panels, activePanelId, setActivePanelId, activeCandida
             {candidate.imageUrl ? <img className="thumb" src={candidate.imageUrl} alt="" /> : <span className="thumb" />}
             <strong>{candidate.id}</strong>
             <small>seed {candidate.seed}</small>
+            <small>{candidate.provider}{candidate.model ? ` / ${candidate.model}` : ""}</small>
             <small>{candidate.qa}</small>
           </button>
         ))}

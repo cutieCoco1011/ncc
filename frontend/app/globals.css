@@ -240,6 +240,7 @@ input {
 
 .candidate small {
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .lettering-pane canvas {

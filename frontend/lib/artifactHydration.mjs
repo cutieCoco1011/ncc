@@ -28,6 +28,8 @@ export function workflowFromArtifacts(artifacts, projectId) {
     seed: candidate.seed,
     qa: candidate.qa_status,
     selected: candidate.selected,
+    provider: candidate.provider_metadata?.provider || "unknown",
+    model: candidate.provider_metadata?.model || "",
     prompt: candidate.prompt.base_prompt,
     imageUrl: projectFileUrl(projectId, candidate.image_path)
   }));
