@@ -1,0 +1,51 @@
+# Dryforge planning docs are local handoff state, not repository content.
+.dryforge/
+
+# Secrets and local environment files.
+.env
+.env.*
+!.env.example
+
+# Local user projects and generated outputs.
+projects/
+ncc-projects/
+generated/
+outputs/
+exports/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / frontend
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.pnpm-store/
+
+# Logs and runtime state
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
