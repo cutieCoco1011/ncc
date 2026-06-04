@@ -25,6 +25,7 @@ dev = [
 
 [project.scripts]
 ncc-api = "ncc.api:run"
+ncc-novelai-smoke = "ncc.real_smoke:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

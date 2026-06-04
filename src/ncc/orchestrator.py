@@ -237,6 +237,7 @@ class NccOrchestrator:
             "prompt_count": len(prompt_ir.prompts),
             "candidate_count": len(candidates.candidates),
             "selected_count": sum(1 for candidate in candidates.candidates if candidate.selected),
+            "image_provider": self.settings.image.provider.value,
             "export_path": str(final_context.project_dir / export.export_path),
             "export_width": export.width,
             "export_height": export.height,

@@ -1,4 +1,6 @@
-from ncc.fixtures import GOLD_PATH_KOREAN_SOURCE
+import pytest
+
+from ncc.fixtures import GOLD_PATH_KOREAN_SOURCE, MULTI_SOURCE_KOREAN_FIXTURES
 from ncc.story_pipeline import MockLLMStoryProvider
 
 
@@ -19,3 +21,13 @@ def test_story_pipeline_keeps_dialogue_as_lettering_metadata() -> None:
 
     assert "동생" in panel.dialogue
     assert "동생" not in panel.composition
+
+
+@pytest.mark.parametrize(("title", "source"), MULTI_SOURCE_KOREAN_FIXTURES)
+def test_story_pipeline_supports_multiple_korean_sources(title: str, source: str) -> None:
+    bundle = MockLLMStoryProvider().analyze(title, source, panel_count=6)
+
+    assert len(bundle.analysis.event_order) >= 3
+    assert len(bundle.storyboard.panels) == 6
+    assert len(bundle.panel_specs.panels) == 6
+    assert all(panel.dialogue or panel.caption for panel in bundle.panel_specs.panels)

@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from PIL import Image
+import pytest
 
 from ncc.exporter import build_default_lettering, export_vertical_png
-from ncc.fixtures import DEFAULT_PROJECT_TITLE, GOLD_PATH_KOREAN_SOURCE
+from ncc.fixtures import DEFAULT_PROJECT_TITLE, GOLD_PATH_KOREAN_SOURCE, MULTI_SOURCE_KOREAN_FIXTURES
 from ncc.images import CandidateGenerationService
 from ncc.orchestrator import NccOrchestrator
 from ncc.prompts import PromptCompiler
@@ -39,6 +40,18 @@ def test_gold_path_api_smoke_reaches_export(tmp_path: Path) -> None:
     assert payload["candidate_count"] == 18
     assert payload["export_width"] >= 1080
     assert Path(payload["export_path"]).exists()
+
+
+@pytest.mark.parametrize(("title", "source"), MULTI_SOURCE_KOREAN_FIXTURES)
+def test_mock_gold_path_exports_multiple_korean_sources(tmp_path: Path, title: str, source: str) -> None:
+    result = NccOrchestrator(tmp_path).run_mock_gold_path(title, source)
+
+    assert result["candidate_count"] == 18
+    assert result["selected_count"] == 6
+    assert result["image_provider"] == "mock"
+    with Image.open(str(result["export_path"])) as image:
+        assert image.width == 1080
+        assert image.height > image.width
 
 
 def test_export_refuses_stale_lettering_selection_hash(tmp_path: Path) -> None:
