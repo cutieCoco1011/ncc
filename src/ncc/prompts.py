@@ -109,7 +109,7 @@ class PromptCompiler:
                         "scale": 6.5,
                         "sampler": "k_euler_ancestral",
                     },
-                    reference_metadata={"mock": True, "source_revision": ir.source_revision},
+                    reference_metadata={"compiler": "ncc-v1", "source_revision": ir.source_revision},
                 )
             )
         return NAIPromptSet(project_id=project_id, prompts=prompts)

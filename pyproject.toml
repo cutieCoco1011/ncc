@@ -9,6 +9,7 @@ description = "Local-first Korean prose to vertical webtoon compiler and editor.
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "certifi>=2024.8.30",
   "fastapi>=0.115",
   "pillow>=10.4",
   "pydantic>=2.8",

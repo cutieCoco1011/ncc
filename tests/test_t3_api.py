@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ncc.api import create_app
-from ncc.models import ArtifactStatus
+from ncc.models import ArtifactStatus, CandidateSet
 from ncc.orchestrator import InvalidArtifactError, NccOrchestrator
 
 
@@ -46,9 +46,7 @@ def test_api_artifact_edit_selection_lettering_and_file_flow(tmp_path: Path) -> 
     stale_export = client.get(f"/projects/{project_id}/exports/latest")
     assert stale_export.status_code == 409
     assert "export is invalid" in stale_export.json()["diagnostics"][0]
-    stale_file = client.get(
-        f"/projects/{project_id}/files/exports/webtoon_mock_gold_path.png"
-    )
+    stale_file = client.get(f"/projects/{project_id}/files/exports/webtoon_export.png")
     assert stale_file.status_code == 409
     invalid_select = client.post(f"/projects/{project_id}/candidates/p1-c1/select")
     assert invalid_select.status_code == 409
@@ -145,7 +143,7 @@ def test_export_file_route_only_serves_current_export(tmp_path: Path) -> None:
     project_id = gold["project_id"]
     project_dir = Path(gold["project_dir"])
     old_export = project_dir / "exports" / "old_export.png"
-    old_export.write_bytes((project_dir / "exports" / "webtoon_mock_gold_path.png").read_bytes())
+    old_export.write_bytes((project_dir / "exports" / "webtoon_export.png").read_bytes())
 
     response = client.get(f"/projects/{project_id}/files/exports/old_export.png")
     assert response.status_code == 409
@@ -182,12 +180,37 @@ def test_novelai_provider_selection_does_not_silently_use_mock(
 ) -> None:
     monkeypatch.setenv("NCC_IMAGE_PROVIDER", "novelai")
     monkeypatch.setenv("NOVELAI_API_TOKEN", "token")
+    from PIL import Image
+
+    class FakeNovelAIBackend:
+        def __init__(self, api_token: str) -> None:
+            assert api_token == "token"
+
+        def generate(self, _prompt, output_path, seed, panel_order, candidate_index):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            Image.new("RGB", (64, 96), (20, 70, 110)).save(output_path, "PNG")
+            return {
+                "provider": "novelai",
+                "model": "fake-model",
+                "seed": seed,
+                "panel_order": panel_order,
+                "candidate_index": candidate_index,
+                "width": 64,
+                "height": 96,
+            }
+
+    monkeypatch.setattr("ncc.orchestrator.NovelAIImageBackend", FakeNovelAIBackend)
     orchestrator = NccOrchestrator(tmp_path)
     context = orchestrator.create_project("demo", "하린이 달린다.")
     orchestrator.run_story_stage(context.project_id)
     orchestrator.run_prompt_stage(context.project_id)
-    with pytest.raises(ValueError, match="not_supported"):
-        orchestrator.run_image_stage(context.project_id)
+    orchestrator.run_image_stage(context.project_id)
+    candidates = orchestrator.storage.read_model(
+        orchestrator.open_project(context.project_id).project_dir,
+        "image_candidates",
+        CandidateSet,
+    )
+    assert candidates.candidates[0].provider_metadata["provider"] == "novelai"
 
 
 def test_unknown_image_provider_reports_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:

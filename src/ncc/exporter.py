@@ -59,7 +59,7 @@ def export_vertical_png(
     storyboard: Storyboard,
     candidates: CandidateSet,
     lettering: LetteringLayout,
-    filename: str = "webtoon_mock_gold_path.png",
+    filename: str = "webtoon_export.png",
 ) -> ExportRecord:
     current_hash = selection_revision_hash(candidates)
     if lettering.source_selection_hash != current_hash:

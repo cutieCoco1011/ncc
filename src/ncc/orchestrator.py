@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 
 from .exporter import build_default_lettering, export_vertical_png, selection_revision_hash
-from .images import CandidateGenerationService
+from .images import CandidateGenerationService, MockImageBackend, NovelAIImageBackend
 from .models import (
     ArtifactStatus,
     CandidateSet,
@@ -119,15 +120,24 @@ class NccOrchestrator:
         run = self.begin_stage("images")
         context = self.open_project(project_id)
         self.require_valid(context.manifest, "nai_prompts")
-        if self.settings.image.provider == ProviderKind.NOVELAI:
-            raise ValueError("NovelAI image generation is not_supported in automated v1; set NCC_IMAGE_PROVIDER=mock")
         if self.settings.image.provider == ProviderKind.NOT_CONFIGURED:
-            raise ValueError("image provider is not_configured; set NCC_IMAGE_PROVIDER=mock for deterministic generation")
+            raise ValueError("image provider is not_configured; set NCC_IMAGE_PROVIDER=mock or configure NOVELAI_API_TOKEN")
         nai_prompts = self.storage.read_model(context.project_dir, "nai_prompts", NAIPromptSet)
-        candidates = CandidateGenerationService().generate_candidates(project_id, context.project_dir, nai_prompts)
+        candidates = CandidateGenerationService(self._image_backend()).generate_candidates(
+            project_id,
+            context.project_dir,
+            nai_prompts,
+        )
         self.storage.write_model(context.project_dir, "image_candidates", candidates)
         self.storage.mark_invalid(context.project_dir, ["lettering", "export"])
         return self.finish_stage(run, message=f"{len(candidates.candidates)} image candidates generated")
+
+    def _image_backend(self) -> MockImageBackend | NovelAIImageBackend:
+        if self.settings.image.provider == ProviderKind.MOCK:
+            return MockImageBackend()
+        if self.settings.image.provider == ProviderKind.NOVELAI:
+            return NovelAIImageBackend(api_token=os.environ.get("NOVELAI_API_TOKEN", ""))
+        raise ValueError(f"unsupported image provider: {self.settings.image.provider.value}")
 
     def run_qa_stage(self, project_id: str) -> StageRun:
         run = self.begin_stage("qa")
