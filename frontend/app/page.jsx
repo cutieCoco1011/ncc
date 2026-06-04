@@ -36,6 +36,7 @@ export default function CreatorPage() {
   const [busy, setBusy] = useState(false);
   const activePanel = workflow.panels.find((panel) => panel.id === activePanelId) || workflow.panels[0];
   const activeCandidates = workflow.candidates.filter((candidate) => candidate.panelId === activePanel.id);
+  const activePreviewCandidate = activeCandidates.find((candidate) => candidate.selected) || activeCandidates[0];
   const selected = selectedCount(workflow);
 
   async function loadBackendArtifacts(nextProjectId = projectId) {
@@ -81,6 +82,12 @@ export default function CreatorPage() {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && new window.URLSearchParams(window.location.search).get("latest") === "1") {
+      openLatestProject();
+    }
+  }, []);
 
   function regenerateMock() {
     setProjectId("");
@@ -215,6 +222,7 @@ export default function CreatorPage() {
         />
         <LetteringPanel
           panel={activePanel}
+          candidate={activePreviewCandidate}
           onDialogue={handleDialogue}
           onExport={handleExport}
           busy={busy}
@@ -352,7 +360,7 @@ function CandidatePanel({ panels, activePanelId, setActivePanelId, activeCandida
   );
 }
 
-function LetteringPanel({ panel, onDialogue, onExport, busy, exportUrl }) {
+function LetteringPanel({ panel, candidate, onDialogue, onExport, busy, exportUrl }) {
   const preview = useMemo(() => ({ ...panel }), [panel]);
   return (
     <section className="pane lettering-pane">
@@ -364,7 +372,7 @@ function LetteringPanel({ panel, onDialogue, onExport, busy, exportUrl }) {
         말풍선
         <input value={panel.dialogue} onChange={(event) => onDialogue(panel.id, event.target.value)} />
       </label>
-      <CanvasPreview panel={preview} />
+      <CanvasPreview panel={preview} candidate={candidate} />
       {exportUrl ? (
         <a className="export-link" href={exportUrl} target="_blank" rel="noreferrer">
           export file
@@ -374,31 +382,57 @@ function LetteringPanel({ panel, onDialogue, onExport, busy, exportUrl }) {
   );
 }
 
-function CanvasPreview({ panel }) {
+function CanvasPreview({ panel, candidate }) {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#4f6f7f";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.ellipse(160, 110, 116, 52, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#171717";
-    ctx.stroke();
-    ctx.fillStyle = "#171717";
-    ctx.font = "18px system-ui, sans-serif";
-    wrapCanvasText(ctx, panel.dialogue, 86, 94, 150, 24);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "16px system-ui, sans-serif";
-    ctx.fillText(panel.composition, 34, 284);
-  }, [panel]);
+    let cancelled = false;
+
+    function drawBase(image) {
+      if (cancelled) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (image) {
+        drawCoverImage(ctx, image, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#4f6f7f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.ellipse(160, 110, 116, 52, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#171717";
+      ctx.stroke();
+      ctx.fillStyle = "#171717";
+      ctx.font = "18px system-ui, sans-serif";
+      wrapCanvasText(ctx, panel.dialogue, 86, 94, 150, 24);
+    }
+
+    if (candidate?.imageUrl) {
+      const image = new window.Image();
+      image.onload = () => drawBase(image);
+      image.onerror = () => drawBase(null);
+      image.src = candidate.imageUrl;
+    } else {
+      drawBase(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [panel, candidate]);
   return <canvas ref={ref} width="320" height="360" aria-label="lettering preview" />;
+}
+
+function drawCoverImage(ctx, image, width, height) {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  ctx.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
 }
 
 function InvalidationBadges({ invalidation }) {
