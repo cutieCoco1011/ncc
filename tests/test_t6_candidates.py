@@ -5,7 +5,7 @@ import zipfile
 from ncc.fixtures import GOLD_PATH_KOREAN_SOURCE
 from PIL import Image
 
-from ncc.images import CandidateGenerationService, NovelAIImageBackend, png_dimensions
+from ncc.images import CandidateGenerationService, NovelAIImageBackend, NovelAIImageError, png_dimensions
 from ncc.models import NAIPrompt, NAIPromptSet
 from ncc.prompts import PromptCompiler
 from ncc.story_pipeline import MockLLMStoryProvider
@@ -98,6 +98,40 @@ def test_candidate_service_preserves_novelai_provider_metadata(tmp_path: Path, m
     assert candidate.provider_metadata["provider"] == "novelai"
     assert candidate.provider_metadata["width"] == 64
     assert (tmp_path / candidate.image_path).exists()
+
+
+def test_novelai_backend_reports_http_errors_without_leaking_token(tmp_path: Path, monkeypatch) -> None:
+    import urllib.error
+
+    def fake_urlopen(*_args, **_kwargs):
+        raise urllib.error.HTTPError(
+            "https://image.novelai.net/ai/generate-image",
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(b'{"message":"Access Token is incorrect."}'),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    backend = NovelAIImageBackend(api_token="dummy-token")
+    prompt = NAIPrompt(
+        panel_id="p1",
+        base_prompt="webtoon panel",
+        character_prompts={},
+        undesired_prompt="text",
+        seed=1,
+    )
+
+    try:
+        backend.generate(prompt, tmp_path / "candidate.png", seed=2, panel_order=1, candidate_index=1)
+    except NovelAIImageError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected NovelAIImageError")
+
+    assert "401" in message
+    assert "Access Token is incorrect" in message
+    assert "dummy-token" not in message
 
 
 class _FakeNovelAIResponse:

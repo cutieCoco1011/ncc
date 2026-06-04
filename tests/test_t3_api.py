@@ -216,6 +216,20 @@ def test_novelai_provider_selection_does_not_silently_use_mock(
     assert candidates.candidates[0].provider_metadata["provider"] == "novelai"
 
 
+def test_novelai_provider_without_token_reports_not_configured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "novelai")
+    monkeypatch.delenv("NOVELAI_API_TOKEN", raising=False)
+    orchestrator = NccOrchestrator(tmp_path)
+    context = orchestrator.create_project("demo", "하린이 달린다.")
+    orchestrator.run_story_stage(context.project_id)
+    orchestrator.run_prompt_stage(context.project_id)
+
+    with pytest.raises(ValueError, match="not_configured"):
+        orchestrator.run_image_stage(context.project_id)
+
+
 def test_unknown_image_provider_reports_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     from ncc.settings import AppSettings
 

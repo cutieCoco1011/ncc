@@ -55,6 +55,14 @@ Product completion requires stronger manual evidence:
 - lettering/export produces a 1080px+ PNG from selected real images;
 - API keys/tokens are absent from artifacts, logs, screenshots, exports, and git diff.
 
+Record the exact evidence commands in the PR or handoff. The expected committed-tree secret scan is:
+
+```bash
+git grep -n -E 'sk-[A-Za-z0-9]|NOVELAI_API_''TOKEN=.+|OPENAI_API_''KEY=.+|Bearer [A-Za-z0-9._-]+' HEAD -- . ':!frontend/package-lock.json'
+```
+
+Generated project directories, screenshots, `.env.local`, `.dryforge/`, caches, and `tmp/` are ignored and must stay out of git.
+
 ## Secret Safety
 
 Project artifacts are stored under the local project root. Storage rejects writes that include configured provider secret values. `.env*`, `.dryforge/`, generated projects, cache directories, and local exports are ignored by git.
