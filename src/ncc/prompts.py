@@ -16,14 +16,27 @@ class StaticTagProvider:
         base_tags = [
             ("vertical webtoon panel", 0.99),
             ("cinematic composition", 0.88),
-            ("rain", 0.86),
             ("dramatic lighting", 0.8),
             (emotion, 0.72),
         ]
-        if "괴물" in beat or "monster" in beat:
-            base_tags.append(("shadow creature", 0.82))
-        if "전차" in beat or "정류장" in beat:
-            base_tags.append(("tram stop", 0.85))
+        keyword_tags = [
+            (("비", "빗", "폭풍"), "rain", 0.86),
+            (("괴물", "그림자", "monster"), "shadow creature", 0.82),
+            (("전차", "정류장"), "tram stop", 0.85),
+            (("도서관", "서가", "책"), "library", 0.84),
+            (("열쇠",), "silver key", 0.82),
+            (("별", "천문도"), "starlight", 0.82),
+            (("지하철", "승강장", "플랫폼"), "subway station", 0.84),
+            (("사탕",), "glowing candy", 0.8),
+            (("바닷가", "파도", "방파제"), "winter seaside", 0.84),
+            (("등대",), "lighthouse", 0.84),
+            (("엽서", "우체통"), "postcard", 0.8),
+            (("우산",), "umbrella", 0.8),
+            (("문구점", "잉크"), "stationery shop", 0.8),
+        ]
+        for keywords, tag, confidence in keyword_tags:
+            if any(keyword in beat for keyword in keywords):
+                base_tags.append((tag, confidence))
         return [
             TagCandidate(tag=tag, source="static-mock", confidence=confidence, provenance={"panel_id": panel_id})
             for tag, confidence in base_tags

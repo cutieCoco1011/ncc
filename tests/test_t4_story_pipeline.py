@@ -31,3 +31,14 @@ def test_story_pipeline_supports_multiple_korean_sources(title: str, source: str
     assert len(bundle.storyboard.panels) == 6
     assert len(bundle.panel_specs.panels) == 6
     assert all(panel.dialogue or panel.caption for panel in bundle.panel_specs.panels)
+    assert len({panel.beat for panel in bundle.storyboard.panels}) == len(bundle.storyboard.panels)
+
+    first_sentence = source.split(".")[0] + "." if "." in source else source
+    assert bundle.storyboard.panels[0].beat == first_sentence
+
+    if "하린" not in source:
+        primary = bundle.characters.characters[0]
+        assert primary.name in source
+        assert primary.character_id == "main_character"
+        assert all("rainy old tram stop" not in panel.setting for panel in bundle.panel_specs.panels)
+        assert all("Harin" not in panel.composition for panel in bundle.panel_specs.panels)

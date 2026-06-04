@@ -50,7 +50,7 @@ export default function CreatorPage() {
     setBusy(true);
     setStatus("backend gold path running");
     try {
-      const result = await runGoldPath({ title: "비 오는 정류장의 약속", source_text: source, panel_count: 6 });
+      const result = await runGoldPath({ title: titleFromSource(source), source_text: source, panel_count: 6 });
       setProjectId(result.project_id);
       setExportUrl(latestExportUrl(result.project_id));
       await loadBackendArtifacts(result.project_id);
@@ -231,6 +231,12 @@ export default function CreatorPage() {
       </section>
     </main>
   );
+}
+
+function titleFromSource(source) {
+  const [firstSentence] = source.split(/(?<=[.!?。])\s+/);
+  const title = (firstSentence || source).trim().replace(/\s+/g, " ").slice(0, 24);
+  return title || "무제 프로젝트";
 }
 
 function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, openLatestProject, busy, status }) {
