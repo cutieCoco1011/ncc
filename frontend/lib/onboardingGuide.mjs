@@ -38,3 +38,31 @@ export function providerModeNote(imageProvider) {
   }
   return imageProvider.disclosure || "선택된 backend image provider로 이미지 후보를 생성합니다.";
 }
+
+export function tagProviderModeLabel(tagProvider) {
+  if (!tagProvider) return "tag provider 확인 중";
+  if (tagProvider.provider === "mock") return "tag mock";
+  if (tagProvider.provider === "local" && tagProvider.credential_env === "DEEPSEEK_API_KEY") {
+    return "DeepSeek-assisted compiler";
+  }
+  if (tagProvider.provider === "local") return "local Danbooru compiler";
+  if (!tagProvider.configured) return "tag provider 미설정";
+  return tagProvider.provider;
+}
+
+export function tagProviderModeNote(tagProvider) {
+  if (!tagProvider) return "tag provider 상태를 불러오는 중입니다.";
+  if (tagProvider.provider === "mock") {
+    return "현재 태그 변환은 mock입니다. 실제 이미지 생성 전에 local Danbooru compiler dry-run을 통과해야 합니다.";
+  }
+  if (tagProvider.provider === "local" && tagProvider.credential_env === "DEEPSEEK_API_KEY") {
+    return "DeepSeek는 태그 후보만 제안하고, 최종 프롬프트는 local Danbooru compiler가 정규화합니다.";
+  }
+  if (tagProvider.provider === "local") {
+    return "LLM 호출 없이 local Danbooru compiler가 canonical tag와 prompt 순서를 결정합니다.";
+  }
+  if (!tagProvider.configured) {
+    return `${tagProvider.credential_env || "tag credential"} 설정 후 태그 후보 제안을 사용할 수 있습니다.`;
+  }
+  return tagProvider.disclosure || "선택된 tag provider는 최종 프롬프트 전에 local compiler 검증을 통과해야 합니다.";
+}

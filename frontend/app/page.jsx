@@ -26,7 +26,13 @@ import {
   selectedCount,
   updateDialogue
 } from "../lib/mockWorkflow.mjs";
-import { providerModeLabel, providerModeNote, workflowGuideSteps } from "../lib/onboardingGuide.mjs";
+import {
+  providerModeLabel,
+  providerModeNote,
+  tagProviderModeLabel,
+  tagProviderModeNote,
+  workflowGuideSteps
+} from "../lib/onboardingGuide.mjs";
 
 export default function CreatorPage() {
   const [source, setSource] = useState(defaultSource);
@@ -43,8 +49,10 @@ export default function CreatorPage() {
   const activeCandidates = workflow.candidates.filter((candidate) => candidate.panelId === activePanel.id);
   const activePreviewCandidate = activeCandidates.find((candidate) => candidate.selected) || activeCandidates[0];
   const selected = selectedCount(workflow);
+  const tagProvider = providers?.tag;
   const imageProvider = providers?.image;
   const backendModeLabel = providerModeLabel(imageProvider);
+  const tagModeLabel = tagProviderModeLabel(tagProvider);
   const modeLabel = projectId ? backendModeLabel : "샘플 미리보기";
 
   async function loadBackendArtifacts(nextProjectId = projectId) {
@@ -221,11 +229,17 @@ export default function CreatorPage() {
           <span>{workflow.panels.length} panels</span>
           <span>{workflow.candidates.length} candidates</span>
           <span>{selected} selected</span>
+          <span>{tagModeLabel}</span>
           <span>{modeLabel}</span>
         </div>
       </header>
 
-      <WorkflowGuide imageProvider={imageProvider} backendModeLabel={backendModeLabel} />
+      <WorkflowGuide
+        tagProvider={tagProvider}
+        tagModeLabel={tagModeLabel}
+        imageProvider={imageProvider}
+        backendModeLabel={backendModeLabel}
+      />
 
       <section className="workspace">
         <SourcePanel
@@ -236,6 +250,7 @@ export default function CreatorPage() {
           openLatestProject={openLatestProject}
           busy={busy}
           status={status}
+          tagProvider={tagProvider}
           imageProvider={imageProvider}
         />
         <ReviewPanel
@@ -274,12 +289,13 @@ function titleFromSource(source) {
   return title || "무제 프로젝트";
 }
 
-function WorkflowGuide({ imageProvider, backendModeLabel }) {
+function WorkflowGuide({ tagProvider, tagModeLabel, imageProvider, backendModeLabel }) {
   return (
     <section className="workflow-guide" aria-label="처음 사용하는 순서">
       <div className="guide-intro">
         <strong>처음이라면 이 순서로 진행하세요</strong>
-        <span>백엔드 이미지: {backendModeLabel}. {providerModeNote(imageProvider)}</span>
+        <span>태그 변환: {tagModeLabel}. {tagProviderModeNote(tagProvider)}</span>
+        <span>이미지 생성: {backendModeLabel}. {providerModeNote(imageProvider)}</span>
       </div>
       <ol className="guide-steps">
         {workflowGuideSteps.map((step, index) => (
@@ -296,7 +312,17 @@ function WorkflowGuide({ imageProvider, backendModeLabel }) {
   );
 }
 
-function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, openLatestProject, busy, status, imageProvider }) {
+function SourcePanel({
+  source,
+  setSource,
+  regenerateMock,
+  runBackendGoldPath,
+  openLatestProject,
+  busy,
+  status,
+  tagProvider,
+  imageProvider
+}) {
   const backendActionLabel = imageProvider?.provider === "novelai" && imageProvider.configured
     ? "실제 이미지 생성"
     : "백엔드 mock 생성";
@@ -316,7 +342,8 @@ function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, op
         </div>
       </div>
       <textarea value={source} onChange={(event) => setSource(event.target.value)} />
-      <p className="provider-note">{providerModeNote(imageProvider)}</p>
+      <p className="provider-note">태그 변환: {tagProviderModeNote(tagProvider)}</p>
+      <p className="provider-note">이미지 생성: {providerModeNote(imageProvider)}</p>
       <div className="stage-strip">
         <span>이야기 분석</span>
         <span>캐릭터</span>

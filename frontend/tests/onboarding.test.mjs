@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { fetchProviders } from "../lib/apiClient.mjs";
-import { providerModeLabel, providerModeNote, workflowGuideSteps } from "../lib/onboardingGuide.mjs";
+import {
+  providerModeLabel,
+  providerModeNote,
+  tagProviderModeLabel,
+  tagProviderModeNote,
+  workflowGuideSteps
+} from "../lib/onboardingGuide.mjs";
 
 test("onboarding guide exposes the whole creator workflow", () => {
   assert.deepEqual(
@@ -32,6 +38,32 @@ test("provider copy clearly separates mock from real NovelAI generation", () => 
   assert.match(providerModeNote(mock), /실제 NovelAI 생성/);
 });
 
+test("tag provider copy separates mock tags from local compiler and DeepSeek assistance", () => {
+  const local = {
+    provider: "local",
+    configured: true,
+    disclosure: "Local Danbooru compiler runs on this machine."
+  };
+  const deepseek = {
+    provider: "local",
+    configured: true,
+    credential_env: "DEEPSEEK_API_KEY",
+    disclosure: "deepseek may suggest tags, but final prompts are produced by the local Danbooru compiler."
+  };
+  const mock = {
+    provider: "mock",
+    configured: true,
+    disclosure: "Mock tag generation runs locally."
+  };
+
+  assert.equal(tagProviderModeLabel(local), "local Danbooru compiler");
+  assert.match(tagProviderModeNote(local), /LLM 호출 없이/);
+  assert.equal(tagProviderModeLabel(deepseek), "DeepSeek-assisted compiler");
+  assert.match(tagProviderModeNote(deepseek), /최종 프롬프트는 local Danbooru compiler/);
+  assert.equal(tagProviderModeLabel(mock), "tag mock");
+  assert.match(tagProviderModeNote(mock), /실제 이미지 생성 전에/);
+});
+
 test("fetchProviders reads backend provider status", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
@@ -39,12 +71,13 @@ test("fetchProviders reads backend provider status", async () => {
     return {
       ok: true,
       async json() {
-        return { image: { provider: "novelai", configured: true } };
+        return { tag: { provider: "local", configured: true }, image: { provider: "novelai", configured: true } };
       }
     };
   };
   try {
     const providers = await fetchProviders("http://example.test");
+    assert.equal(providers.tag.provider, "local");
     assert.equal(providers.image.provider, "novelai");
   } finally {
     globalThis.fetch = originalFetch;
