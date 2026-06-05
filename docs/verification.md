@@ -55,6 +55,36 @@ Product completion requires stronger manual evidence:
 - lettering/export produces a 1080px+ PNG from selected real images;
 - API keys/tokens are absent from artifacts, logs, screenshots, exports, and git diff.
 
+### 2026-06-05 Real NovelAI Check
+
+Credentials were present locally and the real image provider was exercised with three different Korean sources. This was not a mock-image check.
+
+Command shape:
+
+```bash
+# Set NOVELAI_API_TOKEN in the local shell or ignored .env.local first.
+NCC_PROJECTS_DIR=/Users/mangmuse/Documents/ncc-projects-real-multi-source-v3 \
+NCC_IMAGE_PROVIDER=novelai \
+NCC_TAG_PROVIDER=mock \
+.venv/bin/ncc-api
+```
+
+Then each source was submitted through the `/gold-path` API with `panel_count=6`.
+
+Evidence:
+
+- `도서관 별빛 열쇠`: 18 real NovelAI candidates, 6 selected, export `1080x8640`.
+- `지하철 사탕 기계`: 18 real NovelAI candidates, 6 selected, export `1080x8640`.
+- `바닷가 엽서 우체통`: 18 real NovelAI candidates, 6 selected, export `1080x8640`.
+- Manual candidate QA sheet: `tmp/real-v3-manual-selected-contact.jpg` in the local workspace.
+- Real export PNGs are under `/Users/mangmuse/Documents/ncc-projects-real-multi-source-v3/*/exports/webtoon_export.png`.
+
+Quality verdict:
+
+- Pass: real NovelAI images are generated, saved, selectable, lettered in Korean, and exported as vertical PNGs.
+- Pass: prompt fixes kept the main setting from drifting on later beats and improved protagonist visibility/continuity.
+- Remaining gap: automatic first-candidate selection is not a sufficient quality selector; manual candidate choice produced the acceptable exports. A future quality pass should rank/select candidates by protagonist presence, setting match, and character continuity instead of selecting the first candidate per panel.
+
 Record the exact evidence commands in the PR or handoff. The expected committed-tree secret scan is:
 
 ```bash

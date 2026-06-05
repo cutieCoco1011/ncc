@@ -44,3 +44,23 @@ def test_prompt_tags_follow_non_default_source_keywords() -> None:
     assert "postcard" in first_prompt_tags
     assert "tram stop" not in first_prompt_tags
     assert "main_character" in prompt_ir.prompts[0].character_prompts
+
+
+def test_prompt_compiler_adds_character_consistency_controls() -> None:
+    source = (
+        "막차가 끊긴 지하철역에서 민아는 작동하지 않는 사탕 기계가 혼자 빛나는 것을 보았다. "
+        "민아는 파란 운동화 끈을 단단히 묶고, 텅 빈 승강장을 가로질러 숨겨진 안내 방송을 따라갔다."
+    )
+    bundle = MockLLMStoryProvider().analyze("지하철 사탕 기계", source, panel_count=6)
+    nai_set = PromptCompiler().compile_nai_prompts(
+        "demo",
+        PromptCompiler().build_prompt_ir("demo", bundle.panel_specs, bundle.characters),
+    )
+
+    prompt = nai_set.prompts[0]
+    assert "single protagonist only" in prompt.base_prompt
+    assert "consistent character design" in prompt.base_prompt
+    assert "same female protagonist in every panel" in prompt.character_prompts["main_character"]
+    assert "blue sneakers" in prompt.character_prompts["main_character"]
+    assert "gender swap" in prompt.undesired_prompt
+    assert "male protagonist" in prompt.undesired_prompt

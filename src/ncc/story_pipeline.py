@@ -176,17 +176,40 @@ def _infer_primary_character(source_text: str) -> dict[str, object]:
             "negative_tags": ["long blond hair", "blue eyes", "adult woman"],
         }
 
+    stable_traits, stable_forbidden = _stable_primary_traits(source_text)
     outfit = _outfit_traits(source_text)
     return {
         "character_id": "main_character",
         "name": name,
         "aliases": ["주인공", f"{name}"],
-        "visual_lock_traits": _dedupe(["Korean webtoon protagonist", "expressive eyes"] + outfit),
+        "visual_lock_traits": _dedupe(stable_traits + outfit),
         "allowed_variations": ["determined expression", "dynamic pose", "story-specific prop"],
-        "forbidden_traits": ["inconsistent outfit", "different protagonist", "extra fingers"],
+        "forbidden_traits": _dedupe(
+            [
+                "male protagonist",
+                "boy",
+                "adult man",
+                "different protagonist",
+                "inconsistent outfit",
+                "different hair color",
+                "extra fingers",
+            ]
+            + stable_forbidden
+        ),
         "voice_personality_summary": f"{name}은 단서를 따라가며 두려움보다 결심을 선택하는 인물.",
-        "positive_tags": _dedupe(["Korean webtoon protagonist", "expressive eyes"] + outfit),
-        "negative_tags": ["inconsistent outfit", "different protagonist", "extra fingers"],
+        "positive_tags": _dedupe(stable_traits + outfit),
+        "negative_tags": _dedupe(
+            [
+                "male protagonist",
+                "boy",
+                "adult man",
+                "different protagonist",
+                "inconsistent outfit",
+                "different hair color",
+                "extra fingers",
+            ]
+            + stable_forbidden
+        ),
     }
 
 
@@ -215,6 +238,29 @@ def _outfit_traits(source_text: str) -> list[str]:
         if keyword in source_text:
             traits.append(trait)
     return traits[:3] or ["distinct outfit", "short dark hair", "story prop"]
+
+
+def _stable_primary_traits(source_text: str) -> tuple[list[str], list[str]]:
+    base = ["same female protagonist in every panel", "Korean teenage girl", "expressive dark eyes"]
+    if "붉은 목도리" in source_text:
+        return (
+            base + ["short dark bob hair", "red scarf", "navy winter coat"],
+            ["white hair", "silver hair", "long blond hair", "staff", "wand"],
+        )
+    if "파란 운동화" in source_text or "사탕" in source_text:
+        return (
+            base + ["short brown bob hair", "white shirt", "dark skirt", "blue sneakers"],
+            ["white hair", "silver hair", "long blond hair", "red scarf"],
+        )
+    if "하얀 장갑" in source_text or "엽서" in source_text:
+        return (
+            base + ["short black bob hair", "teal winter coat", "white gloves"],
+            ["white hair", "silver hair", "long blond hair", "red scarf"],
+        )
+    return (
+        base + ["short dark bob hair", "distinct outfit"],
+        ["white hair", "silver hair", "long blond hair"],
+    )
 
 
 def _infer_supporting_character(source_text: str) -> dict[str, object] | None:
@@ -252,7 +298,7 @@ def _build_storyboard_panels(
     support: dict[str, object] | None,
 ) -> list[StoryboardPanel]:
     cameras = [
-        "establishing long shot",
+        "medium shot with foreground object",
         "close-up",
         "medium tracking shot",
         "low angle",
@@ -262,9 +308,12 @@ def _build_storyboard_panels(
         "quiet pullback",
     ]
     panels: list[StoryboardPanel] = []
+    story_setting = _setting_for_event(" ".join(events))
     for index, event in enumerate(events):
         order = index + 1
         setting = _setting_for_event(event)
+        if setting == "Korean urban fantasy scene":
+            setting = story_setting
         visible = [primary_character_id]
         if support is not None and order in {2, 4, 6, 7}:
             visible.append(str(support["character_id"]))
@@ -302,13 +351,13 @@ def _setting_for_event(event: str) -> str:
 
 def _composition_for_event(event: str, setting: str, order: int) -> str:
     motifs = [
-        ("열쇠", "silver key glowing in foreground"),
+        ("열쇠", "protagonist holding a glowing silver key, silver key clearly visible in hand"),
         ("천문도", "star chart spreading across the wall"),
         ("서가", "deep bookshelves framing the protagonist"),
-        ("사탕", "transparent glowing candy in close-up"),
+        ("사탕", "protagonist holding transparent glowing candy, candy clearly visible in hand"),
         ("플랫폼", "empty platform lines leading into darkness"),
         ("노선도", "subway map returning in bright fragments"),
-        ("엽서", "dry postcard held against winter sea wind"),
+        ("엽서", "protagonist holding a dry postcard beside a rusted mailbox, postcard clearly visible"),
         ("등대", "lighthouse beam cutting through storm air"),
         ("우체통", "rusted mailbox beside foaming waves"),
         ("우산", "umbrella reversing falling rain"),
@@ -318,12 +367,12 @@ def _composition_for_event(event: str, setting: str, order: int) -> str:
     ]
     for keyword, motif in motifs:
         if keyword in event:
-            return f"{setting}, {motif}"
+            return f"{setting}, {motif}, protagonist clearly visible, readable webtoon panel"
     if order == 1:
-        return f"{setting}, object discovery foreground"
+        return f"{setting}, object discovery foreground, protagonist clearly visible, readable webtoon panel"
     if order >= 5:
-        return f"{setting}, vertical finale with hopeful light"
-    return f"{setting}, cinematic webtoon composition"
+        return f"{setting}, vertical finale with hopeful light, protagonist clearly visible, readable webtoon panel"
+    return f"{setting}, cinematic webtoon composition, protagonist clearly visible, readable webtoon panel"
 
 
 def _dialogue_for_event(event: str, order: int) -> str:

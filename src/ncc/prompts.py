@@ -69,6 +69,13 @@ class PromptCompiler:
                 character_undesired[character_id] = forbidden
             base_prompt = _dedupe(
                 [
+                    "anime webtoon illustration",
+                    "full color comic panel",
+                    "clear readable scene",
+                    "balanced lighting",
+                    "protagonist clearly visible",
+                    "single protagonist only",
+                    "consistent character design",
                     panel.setting,
                     panel.camera,
                     panel.composition,
@@ -83,7 +90,20 @@ class PromptCompiler:
                     panel_id=panel.panel_id,
                     base_prompt=base_prompt,
                     character_prompts=character_prompts,
-                    global_undesired=["text", "watermark", "logo", "speech bubble text"],
+                    global_undesired=[
+                        "text",
+                        "watermark",
+                        "logo",
+                        "speech bubble text",
+                        "overly dark",
+                        "black frame",
+                        "empty scene",
+                        "silhouette only",
+                        "low contrast",
+                        "missing protagonist",
+                        "gender swap",
+                        "different character",
+                    ],
                     character_undesired=character_undesired,
                     tag_candidates=tag_candidates,
                     priority_metadata={
