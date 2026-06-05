@@ -55,6 +55,23 @@ Product completion requires stronger manual evidence:
 - lettering/export produces a 1080px+ PNG from selected real images;
 - API keys/tokens are absent from artifacts, logs, screenshots, exports, and git diff.
 
+## Creator UI Flow
+
+The creator UI completion gate is the same workflow a first-time user should follow:
+
+1. read the first-screen guide and confirm it distinguishes `backend mock` from `실제 NovelAI`;
+2. paste or open a short Korean source;
+3. confirm the story review pane shows character locks and 6 panels;
+4. select a visible image candidate from the gallery;
+5. edit the Korean speech balloon text;
+6. run `PNG Export` and confirm the backend lettering artifact and exported PNG contain the edited text.
+
+Required visual evidence:
+
+- desktop screenshot at `http://127.0.0.1:3000/` with the full guide visible;
+- mobile screenshot proving the same guide has no horizontal overflow;
+- post-export screenshot showing real image candidates, selected candidate state, edited speech balloon text, and `PNG 열기`.
+
 ### 2026-06-05 Real NovelAI Check
 
 Credentials were present locally and the real image provider was exercised with three different Korean sources. This was not a mock-image check.
@@ -84,6 +101,18 @@ Quality verdict:
 - Pass: real NovelAI images are generated, saved, selectable, lettered in Korean, and exported as vertical PNGs.
 - Pass: prompt fixes kept the main setting from drifting on later beats and improved protagonist visibility/continuity.
 - Remaining gap: automatic first-candidate selection is not a sufficient quality selector; manual candidate choice produced the acceptable exports. A future quality pass should rank/select candidates by protagonist presence, setting match, and character continuity instead of selecting the first candidate per panel.
+
+### 2026-06-05 Creator UI Onboarding Check
+
+The creator UI was exercised at `http://127.0.0.1:3000/` against a local API configured with `NCC_IMAGE_PROVIDER=novelai`, `NCC_TAG_PROVIDER=mock`, and `NOVELAI_API_TOKEN` from ignored local env.
+
+Evidence:
+
+- desktop guide screenshot: `tmp/ux-guide-desktop-final.png`;
+- mobile guide screenshot: `tmp/ux-guide-mobile-final.png`;
+- post-export real-flow screenshot: `tmp/ux-flow-after-export-final.png`;
+- provider guide copy showed `백엔드 이미지: 실제 NovelAI`;
+- the UI opened the latest real NovelAI project, selected `p1-c2`, edited the `p1-speech` text to `처음 사용자 플로우 확인`, ran `PNG Export`, and the backend artifact preserved that exact text with `manual_text=true`.
 
 Record the exact evidence commands in the PR or handoff. The expected committed-tree secret scan is:
 

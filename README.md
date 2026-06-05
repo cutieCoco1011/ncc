@@ -32,6 +32,17 @@ Real providers are opt-in through local environment variables. Source text may b
 
 Mock image generation is a test/development path, not the user-facing completion gate. When `NCC_IMAGE_PROVIDER=novelai` and `NOVELAI_API_TOKEN` are set, the image stage calls NovelAI and stores returned candidate PNGs locally with provider metadata.
 
+## Creator UI Workflow
+
+The first screen must make the user flow explicit:
+
+1. paste a short Korean source scene;
+2. review character locks and the 6 storyboard panels;
+3. select one image candidate per panel;
+4. edit Korean speech balloons and export the vertical PNG.
+
+The UI must also show the active backend image mode. `backend mock` means the images are sample flow-check outputs. `실제 NovelAI` means the image prompts are sent to NovelAI and the returned candidate PNGs are stored in the local project directory.
+
 ## Backend
 
 Start the local API:

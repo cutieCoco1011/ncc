@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchArtifacts,
+  fetchProviders,
   latestExportUrl,
   listProjects,
   patchBackendCharacter,
@@ -25,19 +26,26 @@ import {
   selectedCount,
   updateDialogue
 } from "../lib/mockWorkflow.mjs";
+import { providerModeLabel, providerModeNote, workflowGuideSteps } from "../lib/onboardingGuide.mjs";
 
 export default function CreatorPage() {
   const [source, setSource] = useState(defaultSource);
   const [workflow, setWorkflow] = useState(() => createWorkflow(defaultSource));
   const [projectId, setProjectId] = useState("");
   const [activePanelId, setActivePanelId] = useState("p1");
-  const [status, setStatus] = useState("mock workflow ready");
+  const [status, setStatus] = useState("샘플 미리보기 준비됨");
   const [exportUrl, setExportUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [letteringSaving, setLetteringSaving] = useState(false);
+  const [providers, setProviders] = useState(null);
+  const letteringSaveRef = useRef(Promise.resolve());
   const activePanel = workflow.panels.find((panel) => panel.id === activePanelId) || workflow.panels[0];
   const activeCandidates = workflow.candidates.filter((candidate) => candidate.panelId === activePanel.id);
   const activePreviewCandidate = activeCandidates.find((candidate) => candidate.selected) || activeCandidates[0];
   const selected = selectedCount(workflow);
+  const imageProvider = providers?.image;
+  const backendModeLabel = providerModeLabel(imageProvider);
+  const modeLabel = projectId ? backendModeLabel : "샘플 미리보기";
 
   async function loadBackendArtifacts(nextProjectId = projectId) {
     if (!nextProjectId) return;
@@ -48,13 +56,13 @@ export default function CreatorPage() {
 
   async function runBackendGoldPath() {
     setBusy(true);
-    setStatus("backend gold path running");
+    setStatus("원본을 분석하고 이미지 후보를 생성하는 중");
     try {
       const result = await runGoldPath({ title: titleFromSource(source), source_text: source, panel_count: 6 });
       setProjectId(result.project_id);
       setExportUrl(latestExportUrl(result.project_id));
       await loadBackendArtifacts(result.project_id);
-      setStatus(`export ready: ${result.export_width}x${result.export_height}`);
+      setStatus(`PNG 준비됨: ${result.export_width}x${result.export_height}`);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -64,18 +72,18 @@ export default function CreatorPage() {
 
   async function openLatestProject() {
     setBusy(true);
-    setStatus("loading latest project");
+    setStatus("최근 backend 프로젝트를 불러오는 중");
     try {
       const projects = await listProjects();
       if (!projects.length) {
-        setStatus("no backend projects found");
+        setStatus("불러올 backend 프로젝트가 없습니다");
         return;
       }
       const [latest] = [...projects].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
       setProjectId(latest.project_id);
       setExportUrl(latestExportUrl(latest.project_id));
       await loadBackendArtifacts(latest.project_id);
-      setStatus(`loaded ${latest.title}`);
+      setStatus(`불러옴: ${latest.title}`);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -89,12 +97,26 @@ export default function CreatorPage() {
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchProviders()
+      .then((nextProviders) => {
+        if (!cancelled) setProviders(nextProviders);
+      })
+      .catch((error) => {
+        if (!cancelled) setStatus(`provider 상태 확인 실패: ${error.message}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function regenerateMock() {
     setProjectId("");
     setExportUrl("");
     setWorkflow(createWorkflow(source));
     setActivePanelId("p1");
-    setStatus("mock workflow regenerated");
+    setStatus("샘플 미리보기 다시 생성됨");
   }
 
   async function handleSelect(candidate) {
@@ -106,7 +128,7 @@ export default function CreatorPage() {
     try {
       await selectBackendCandidate(projectId, candidate.id);
       await loadBackendArtifacts(projectId);
-      setStatus(`${candidate.id} selected; export invalidated`);
+      setStatus(`${candidate.id} 선택됨. PNG를 다시 내보내야 합니다.`);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -117,26 +139,36 @@ export default function CreatorPage() {
   async function handleDialogue(panelId, text) {
     setWorkflow((current) => updateDialogue(current, panelId, text));
     if (!projectId) return;
+    setLetteringSaving(true);
+    const save = letteringSaveRef.current
+      .catch(() => {})
+      .then(() => updateBackendLettering(projectId, `${panelId}-speech`, { text }));
+    letteringSaveRef.current = save;
     try {
-      await updateBackendLettering(projectId, `${panelId}-speech`, { text });
-      setStatus("lettering updated; export invalidated");
+      await save;
+      setStatus("말풍선 수정됨. PNG를 다시 내보내야 합니다.");
     } catch (error) {
       setStatus(error.message);
+    } finally {
+      if (letteringSaveRef.current === save) {
+        setLetteringSaving(false);
+      }
     }
   }
 
   async function handleExport() {
     if (!projectId) {
-      setStatus("run backend gold path before exporting");
+      setStatus("PNG를 내보내려면 먼저 backend 생성 또는 최근 작업 열기를 실행하세요");
       return;
     }
     setBusy(true);
     try {
+      await letteringSaveRef.current;
       await runBackendLettering(projectId);
       await runBackendExport(projectId);
       await loadBackendArtifacts(projectId);
       setExportUrl(latestExportUrl(projectId));
-      setStatus("PNG export refreshed");
+      setStatus("PNG export 갱신됨");
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -146,14 +178,14 @@ export default function CreatorPage() {
 
   async function handleRefreshPanelSpecs() {
     if (!projectId) {
-      setStatus("run backend gold path before refreshing panel specs");
+      setStatus("패널을 다시 만들려면 먼저 backend 생성 또는 최근 작업 열기를 실행하세요");
       return;
     }
     setBusy(true);
     try {
       await runBackendPanelSpecs(projectId);
       await loadBackendArtifacts(projectId);
-      setStatus("panel specs refreshed from edited storyboard");
+      setStatus("수정한 이야기에서 패널을 다시 만들었습니다");
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -163,14 +195,14 @@ export default function CreatorPage() {
 
   async function handleRefreshStage(stage) {
     if (!projectId) {
-      setStatus("run backend gold path before refreshing stages");
+      setStatus("단계를 갱신하려면 먼저 backend 생성 또는 최근 작업 열기를 실행하세요");
       return;
     }
     setBusy(true);
     try {
       await runStage(projectId, stage);
       await loadBackendArtifacts(projectId);
-      setStatus(`${stage} refreshed`);
+      setStatus(`${stage} 갱신됨`);
     } catch (error) {
       setStatus(error.message);
     } finally {
@@ -183,15 +215,17 @@ export default function CreatorPage() {
       <header className="topbar">
         <div>
           <h1>ncc creator</h1>
-          <p>한국어 장면을 6패널 세로 웹툰으로 컴파일</p>
+          <p>짧은 한국어 장면을 이미지 후보와 말풍선이 있는 세로 웹툰 PNG로 만듭니다.</p>
         </div>
         <div className="metrics" aria-label="workflow status">
           <span>{workflow.panels.length} panels</span>
           <span>{workflow.candidates.length} candidates</span>
           <span>{selected} selected</span>
-          <span>{projectId ? "backend" : "mock"}</span>
+          <span>{modeLabel}</span>
         </div>
       </header>
+
+      <WorkflowGuide imageProvider={imageProvider} backendModeLabel={backendModeLabel} />
 
       <section className="workspace">
         <SourcePanel
@@ -202,6 +236,7 @@ export default function CreatorPage() {
           openLatestProject={openLatestProject}
           busy={busy}
           status={status}
+          imageProvider={imageProvider}
         />
         <ReviewPanel
           workflow={workflow}
@@ -218,14 +253,14 @@ export default function CreatorPage() {
           setActivePanelId={setActivePanelId}
           activeCandidates={activeCandidates}
           onSelect={handleSelect}
-          busy={busy}
+          busy={busy || letteringSaving}
         />
         <LetteringPanel
           panel={activePanel}
           candidate={activePreviewCandidate}
           onDialogue={handleDialogue}
           onExport={handleExport}
-          busy={busy}
+          busy={busy || letteringSaving}
           exportUrl={exportUrl}
         />
       </section>
@@ -239,24 +274,55 @@ function titleFromSource(source) {
   return title || "무제 프로젝트";
 }
 
-function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, openLatestProject, busy, status }) {
+function WorkflowGuide({ imageProvider, backendModeLabel }) {
+  return (
+    <section className="workflow-guide" aria-label="처음 사용하는 순서">
+      <div className="guide-intro">
+        <strong>처음이라면 이 순서로 진행하세요</strong>
+        <span>백엔드 이미지: {backendModeLabel}. {providerModeNote(imageProvider)}</span>
+      </div>
+      <ol className="guide-steps">
+        {workflowGuideSteps.map((step, index) => (
+          <li key={step.title}>
+            <span>{index + 1}</span>
+            <div>
+              <strong>{step.title}</strong>
+              <p>{step.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function SourcePanel({ source, setSource, regenerateMock, runBackendGoldPath, openLatestProject, busy, status, imageProvider }) {
+  const backendActionLabel = imageProvider?.provider === "novelai" && imageProvider.configured
+    ? "실제 이미지 생성"
+    : "백엔드 mock 생성";
   return (
     <section className="pane source-pane">
       <div className="pane-title">
-        <h2>소스</h2>
+        <div>
+          <h2>1. 원본 입력</h2>
+          <p>장면을 붙여넣고 실제 결과가 필요하면 실제 이미지 생성을 실행하세요.</p>
+        </div>
         <div className="button-row">
-          <button onClick={regenerateMock} disabled={busy}>mock</button>
-          <button onClick={openLatestProject} disabled={busy}>latest</button>
-          <button onClick={runBackendGoldPath} disabled={busy}>backend</button>
+          <button onClick={regenerateMock} disabled={busy}>샘플 미리보기</button>
+          <button onClick={openLatestProject} disabled={busy}>최근 작업 열기</button>
+          <button className="primary-action" onClick={runBackendGoldPath} disabled={busy}>
+            {backendActionLabel}
+          </button>
         </div>
       </div>
       <textarea value={source} onChange={(event) => setSource(event.target.value)} />
+      <p className="provider-note">{providerModeNote(imageProvider)}</p>
       <div className="stage-strip">
-        <span>analysis</span>
-        <span>characters</span>
-        <span>storyboard</span>
-        <span>prompts</span>
-        <span>images</span>
+        <span>이야기 분석</span>
+        <span>캐릭터</span>
+        <span>6패널</span>
+        <span>프롬프트</span>
+        <span>이미지 후보</span>
       </div>
       <p className="status-line">{status}</p>
     </section>
@@ -292,11 +358,14 @@ function ReviewPanel({ workflow, setWorkflow, projectId, reload, setStatus, refr
   return (
     <section className="pane review-pane">
       <div className="pane-title">
-        <h2>리뷰</h2>
+        <div>
+          <h2>2. 이야기 확인</h2>
+          <p>캐릭터와 패널 내용이 원본과 맞는지 확인합니다.</p>
+        </div>
         <InvalidationBadges invalidation={workflow.invalidation} />
       </div>
       <label>
-        캐릭터 visual lock
+        캐릭터 고정 조건
         <input
           value={character.visualLocks.join(", ")}
           onChange={(event) =>
@@ -320,10 +389,10 @@ function ReviewPanel({ workflow, setWorkflow, projectId, reload, setStatus, refr
         ))}
       </div>
       <div className="refresh-grid">
-        <button onClick={refreshPanelSpecs}>panel specs refresh</button>
-        <button onClick={() => refreshStage("prompts")}>prompts refresh</button>
-        <button onClick={() => refreshStage("images")}>images refresh</button>
-        <button onClick={() => refreshStage("qa")}>QA refresh</button>
+        <button onClick={refreshPanelSpecs}>패널 다시 만들기</button>
+        <button onClick={() => refreshStage("prompts")}>프롬프트 갱신</button>
+        <button onClick={() => refreshStage("images")}>이미지 재생성</button>
+        <button onClick={() => refreshStage("qa")}>후보 QA 갱신</button>
       </div>
     </section>
   );
@@ -333,7 +402,10 @@ function CandidatePanel({ panels, activePanelId, setActivePanelId, activeCandida
   return (
     <section className="pane candidates-pane">
       <div className="pane-title">
-        <h2>후보 선택</h2>
+        <div>
+          <h2>3. 후보 이미지 선택</h2>
+          <p>패널 번호를 고른 뒤 후보 3장 중 export에 넣을 이미지를 선택합니다.</p>
+        </div>
         <div className="segmented">
           {panels.map((panel) => (
             <button
@@ -354,8 +426,12 @@ function CandidatePanel({ panels, activePanelId, setActivePanelId, activeCandida
             onClick={() => onSelect(candidate)}
             disabled={busy}
           >
-            {candidate.imageUrl ? <img className="thumb" src={candidate.imageUrl} alt="" /> : <span className="thumb" />}
-            <strong>{candidate.id}</strong>
+            {candidate.imageUrl ? (
+              <img className="thumb" src={candidate.imageUrl} alt={`${candidate.id} 후보 이미지`} />
+            ) : (
+              <span className="thumb" />
+            )}
+            <strong>{candidate.id}{candidate.selected ? " 선택됨" : ""}</strong>
             <small>seed {candidate.seed}</small>
             <small>{candidate.provider}{candidate.model ? ` / ${candidate.model}` : ""}</small>
             <small>{candidate.qa}</small>
@@ -371,7 +447,10 @@ function LetteringPanel({ panel, candidate, onDialogue, onExport, busy, exportUr
   return (
     <section className="pane lettering-pane">
       <div className="pane-title">
-        <h2>레터링</h2>
+        <div>
+          <h2>4. 말풍선과 PNG</h2>
+          <p>말풍선 문구를 수정한 뒤 최신 선택으로 PNG를 내보냅니다.</p>
+        </div>
         <button onClick={onExport} disabled={busy}>PNG Export</button>
       </div>
       <label>
@@ -381,7 +460,7 @@ function LetteringPanel({ panel, candidate, onDialogue, onExport, busy, exportUr
       <CanvasPreview panel={preview} candidate={candidate} />
       {exportUrl ? (
         <a className="export-link" href={exportUrl} target="_blank" rel="noreferrer">
-          export file
+          PNG 열기
         </a>
       ) : null}
     </section>

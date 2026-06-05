@@ -317,6 +317,7 @@ class LetterBalloon(NccModel):
     height: int = Field(gt=0)
     tail_direction: Literal["left", "right", "up", "down", "none"] = "down"
     kind: Literal["speech", "caption"] = "speech"
+    manual_text: bool = False
 
     @field_validator("balloon_id", "panel_id")
     @classmethod

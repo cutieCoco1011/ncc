@@ -179,6 +179,8 @@ class NccOrchestrator:
                         "width": balloon.width,
                         "height": balloon.height,
                         "tail_direction": balloon.tail_direction,
+                        "text": balloon.text if balloon.manual_text else fresh_by_id[balloon.balloon_id].text,
+                        "manual_text": balloon.manual_text,
                     }
                 )
                 for balloon in existing.balloons

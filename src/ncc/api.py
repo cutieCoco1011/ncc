@@ -251,6 +251,8 @@ def create_app(projects_root: Path | str | None = None) -> FastAPI:
         context = orchestrator.open_project(project_id)
         lettering = orchestrator.storage.read_model(context.project_dir, "lettering", LetteringLayout)
         updates = patch.model_dump(exclude_none=True)
+        if "text" in updates:
+            updates["manual_text"] = True
         changed = False
         balloons = []
         for balloon in lettering.balloons:

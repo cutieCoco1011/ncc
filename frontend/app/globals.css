@@ -14,16 +14,22 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
   font-family: Arial, "Apple SD Gothic Neo", sans-serif;
+  overflow-x: hidden;
 }
 
 button,
 input,
 textarea {
+  min-width: 0;
   font: inherit;
 }
 
@@ -35,10 +41,27 @@ button {
   padding: 0 12px;
   border-radius: 6px;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
 button:hover {
   border-color: var(--accent);
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.primary-action {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.primary-action:hover {
+  border-color: #0b5f59;
 }
 
 .shell {
@@ -51,8 +74,14 @@ button:hover {
   justify-content: space-between;
   align-items: flex-end;
   gap: 16px;
+  width: 100%;
   max-width: 1480px;
   margin: 0 auto 18px;
+}
+
+.topbar > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .topbar h1 {
@@ -64,6 +93,7 @@ button:hover {
 .topbar p {
   margin: 4px 0 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .metrics {
@@ -74,7 +104,9 @@ button:hover {
 
 .button-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-end;
 }
 
 .metrics span,
@@ -88,10 +120,78 @@ button:hover {
   white-space: nowrap;
 }
 
+.workflow-guide {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.guide-intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.guide-intro span,
+.provider-note,
+.pane-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.guide-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-steps li {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfb;
+}
+
+.guide-steps li > span,
+.panel-list span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e8f3f1;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.guide-steps p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(260px, 1.1fr) minmax(260px, 1fr) minmax(260px, 1fr) minmax(320px, 0.9fr);
   gap: 14px;
+  width: 100%;
   max-width: 1480px;
   margin: 0 auto;
 }
@@ -107,9 +207,13 @@ button:hover {
 .pane-title {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.pane-title > div {
+  min-width: 0;
 }
 
 .pane h2 {
@@ -120,7 +224,8 @@ button:hover {
 
 textarea {
   width: 100%;
-  height: 420px;
+  min-height: 320px;
+  height: 38vh;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -156,6 +261,15 @@ input {
   margin-top: 12px;
 }
 
+.provider-note {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #c6d8d5;
+  border-radius: 6px;
+  background: #f1faf8;
+  color: #20534f;
+}
+
 .status-line {
   min-height: 22px;
   margin: 10px 0 0;
@@ -185,16 +299,6 @@ input {
 .panel-list label {
   grid-template-columns: 28px 1fr;
   align-items: center;
-}
-
-.panel-list span {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: #e8f3f1;
-  color: var(--accent);
 }
 
 .segmented button {
@@ -266,6 +370,10 @@ input {
 }
 
 @media (max-width: 1180px) {
+  .guide-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .workspace {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -279,10 +387,51 @@ input {
   .topbar {
     align-items: start;
     flex-direction: column;
+    max-width: 100%;
+  }
+
+  .metrics {
+    width: 100%;
+  }
+
+  .metrics span {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .guide-intro {
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .guide-intro span {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .guide-steps {
+    grid-template-columns: 1fr;
   }
 
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .pane-title {
+    flex-direction: column;
+  }
+
+  .button-row {
+    justify-content: start;
+    width: 100%;
+  }
+
+  .button-row button {
+    flex: 1 1 100%;
+    padding: 0 10px;
+    white-space: normal;
   }
 
   .candidate-grid {

@@ -97,8 +97,21 @@ def test_api_artifact_edit_selection_lettering_and_file_flow(tmp_path: Path) -> 
         json={"text": "정말 반짝이잖아."},
     ).json()
     assert patched["manifest"]["artifact_status"]["export"] == "invalid"
+    patched_balloon = next(
+        balloon
+        for balloon in patched["lettering"]["balloons"]
+        if balloon["balloon_id"] == "p1-speech"
+    )
+    assert patched_balloon["manual_text"] is True
     refreshed = client.post(f"/projects/{project_id}/stages/lettering")
     assert refreshed.status_code == 200
+    refreshed_lettering = client.get(f"/projects/{project_id}/artifacts").json()["lettering"]
+    refreshed_balloon = next(
+        balloon
+        for balloon in refreshed_lettering["balloons"]
+        if balloon["balloon_id"] == "p1-speech"
+    )
+    assert refreshed_balloon["text"] == "정말 반짝이잖아."
     exported = client.post(f"/projects/{project_id}/stages/export")
     assert exported.status_code == 200
 

@@ -51,6 +51,14 @@ export async function listProjects(baseUrl = DEFAULT_BASE_URL) {
   return response.json();
 }
 
+export async function fetchProviders(baseUrl = DEFAULT_BASE_URL) {
+  const response = await fetch(`${baseUrl}/providers`);
+  if (!response.ok) {
+    throw new Error(`fetch providers failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function selectBackendCandidate(projectId, candidateId, baseUrl = DEFAULT_BASE_URL) {
   const response = await fetch(`${baseUrl}/projects/${projectId}/candidates/${candidateId}/select`, {
     method: "POST"
