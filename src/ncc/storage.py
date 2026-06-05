@@ -58,7 +58,7 @@ class ProjectStorage:
         safe_id = _validate_project_id(project_id) if project_id else _project_id(title, source_hash)
         project_dir = safe_project_path(self.root, safe_id)
         project_dir.mkdir(parents=True, exist_ok=True)
-        for dirname in ("refs", "images", "lettering", "exports"):
+        for dirname in ("refs", "lettering", "exports"):
             (project_dir / dirname).mkdir(exist_ok=True)
 
         manifest = ProjectManifest(

@@ -195,6 +195,7 @@ def test_novelai_provider_selection_does_not_silently_use_mock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("NCC_IMAGE_PROVIDER", "novelai")
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "local")
     monkeypatch.setenv("NOVELAI_API_TOKEN", "token")
     from PIL import Image
 
@@ -227,6 +228,161 @@ def test_novelai_provider_selection_does_not_silently_use_mock(
         CandidateSet,
     )
     assert candidates.candidates[0].provider_metadata["provider"] == "novelai"
+
+
+def test_api_prompt_dry_run_with_local_tags_does_not_generate_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "local")
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "mock")
+    client = TestClient(create_app(tmp_path))
+    project = client.post(
+        "/projects",
+        json={
+            "title": "dry run",
+            "source_text": "서윤은 겨울 바닷가에서 엽서를 발견했다.",
+            "panel_count": 6,
+        },
+    ).json()
+    project_id = project["project_id"]
+    project_dir = Path(project["project_dir"])
+
+    assert client.post(f"/projects/{project_id}/stages/story").status_code == 200
+    assert client.post(f"/projects/{project_id}/stages/prompts").status_code == 200
+
+    artifacts = client.get(f"/projects/{project_id}/artifacts").json()
+    assert artifacts["prompt_ir"]["prompts"]
+    assert artifacts["nai_prompts"]["prompts"]
+    assert "image_candidates" not in artifacts
+    assert not (project_dir / "images").exists()
+    first_tag = artifacts["prompt_ir"]["prompts"][0]["tag_candidates"][0]
+    assert first_tag["provenance"]["provider"] == "local"
+
+
+def test_api_prompt_dry_run_with_deepseek_tags_still_uses_local_compiler(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "mock")
+    client = TestClient(create_app(tmp_path))
+    project = client.post(
+        "/projects",
+        json={
+            "title": "deepseek prompt dry run",
+            "source_text": "비 오는 전차 정류장에서 고양이 브로치가 빛난다.",
+            "panel_count": 6,
+        },
+    ).json()
+    project_id = project["project_id"]
+
+    assert client.post(f"/projects/{project_id}/stages/story").status_code == 200
+    assert client.post(f"/projects/{project_id}/stages/prompts").status_code == 200
+
+    artifacts = client.get(f"/projects/{project_id}/artifacts").json()
+    first_tag = artifacts["prompt_ir"]["prompts"][0]["tag_candidates"][0]
+    prompt_tags = {tag["tag"] for tag in artifacts["prompt_ir"]["prompts"][0]["tag_candidates"]}
+    assert first_tag["provenance"]["provider"] == "deepseek"
+    assert "compiler" in first_tag["provenance"]
+    assert "cat_brooch" in prompt_tags
+
+
+def test_api_prompt_dry_run_can_opt_into_model_suggestion_candidates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class FakeModelSuggestionExtractor:
+        provider_name = "deepseek"
+
+        def candidates_for_text(self, _text: str) -> list[str]:
+            return ["lighthouse"]
+
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("NCC_TAG_SUGGESTION_MODE", "external")
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "mock")
+    monkeypatch.setattr(
+        "ncc.orchestrator.OpenAICompatibleTagCandidateExtractor.from_env",
+        lambda provider_name: FakeModelSuggestionExtractor(),
+    )
+    client = TestClient(create_app(tmp_path))
+    project = client.post(
+        "/projects",
+        json={
+            "title": "deepseek suggestion dry run",
+            "source_text": "하린이 정류장에 선다.",
+            "panel_count": 6,
+        },
+    ).json()
+    project_id = project["project_id"]
+
+    assert client.post(f"/projects/{project_id}/stages/story").status_code == 200
+    assert client.post(f"/projects/{project_id}/stages/prompts").status_code == 200
+
+    artifacts = client.get(f"/projects/{project_id}/artifacts").json()
+    prompt_tags = {tag["tag"] for tag in artifacts["prompt_ir"]["prompts"][0]["tag_candidates"]}
+    assert "lighthouse" in prompt_tags
+
+
+def test_external_tag_suggestion_failure_returns_prompt_stage_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class FailingModelSuggestionExtractor:
+        provider_name = "deepseek"
+
+        def candidates_for_text(self, _text: str) -> list[str]:
+            raise RuntimeError("upstream timeout")
+
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("NCC_TAG_SUGGESTION_MODE", "external")
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "mock")
+    monkeypatch.setattr(
+        "ncc.orchestrator.OpenAICompatibleTagCandidateExtractor.from_env",
+        lambda provider_name: FailingModelSuggestionExtractor(),
+    )
+    client = TestClient(create_app(tmp_path))
+    project = client.post(
+        "/projects",
+        json={
+            "title": "deepseek failure diagnostic",
+            "source_text": "하린이 정류장에 선다.",
+            "panel_count": 6,
+        },
+    ).json()
+    project_id = project["project_id"]
+
+    assert client.post(f"/projects/{project_id}/stages/story").status_code == 200
+    response = client.post(f"/projects/{project_id}/stages/prompts")
+
+    assert response.status_code == 422
+    assert "tag candidate extractor failed: deepseek" in response.json()["diagnostics"][0]
+
+
+def test_novelai_image_stage_requires_non_mock_tag_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "mock")
+    monkeypatch.setenv("NCC_IMAGE_PROVIDER", "novelai")
+    monkeypatch.setenv("NOVELAI_API_TOKEN", "token")
+
+    class FailingNovelAIBackend:
+        def __init__(self, api_token: str) -> None:
+            raise AssertionError("NovelAI backend should not be reached")
+
+    monkeypatch.setattr("ncc.orchestrator.NovelAIImageBackend", FailingNovelAIBackend)
+    orchestrator = NccOrchestrator(tmp_path)
+    context = orchestrator.create_project("demo", "하린이 달린다.")
+    orchestrator.run_story_stage(context.project_id)
+    orchestrator.run_prompt_stage(context.project_id)
+
+    with pytest.raises(ValueError, match="requires NCC_TAG_PROVIDER=local"):
+        orchestrator.run_image_stage(context.project_id)
 
 
 def test_novelai_provider_without_token_reports_not_configured(

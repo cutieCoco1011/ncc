@@ -41,7 +41,7 @@ class AppSettings:
         secrets: list[str] = []
         llm = _llm_config(llm_provider, secrets)
         image = _image_config(image_provider, secrets)
-        tag = _tag_config(tag_provider)
+        tag = _tag_config(tag_provider, secrets)
 
         return cls(
             projects_dir=os.environ.get("NCC_PROJECTS_DIR", "ncc-projects"),
@@ -123,7 +123,7 @@ def _image_config(provider: str, secrets: list[str]) -> ProviderConfig:
     )
 
 
-def _tag_config(provider: str) -> ProviderConfig:
+def _tag_config(provider: str, secrets: list[str]) -> ProviderConfig:
     if provider in {"", "mock"}:
         return ProviderConfig(
             name="tag",
@@ -136,7 +136,37 @@ def _tag_config(provider: str) -> ProviderConfig:
             name="tag",
             provider=ProviderKind.LOCAL,
             configured=True,
-            disclosure="Local tag generation runs on this machine.",
+            disclosure="Local Danbooru compiler runs on this machine.",
+        )
+    if provider == "openai":
+        key = os.environ.get("OPENAI_API_KEY", "")
+        secrets.append(key)
+        return ProviderConfig(
+            name="tag",
+            provider=ProviderKind.OPENAI if key else ProviderKind.NOT_CONFIGURED,
+            configured=bool(key),
+            credential_env="OPENAI_API_KEY",
+            disclosure="openai may suggest tags, but final prompts are produced by the local Danbooru compiler.",
+        )
+    if provider == "deepseek":
+        key = os.environ.get("DEEPSEEK_API_KEY", "")
+        secrets.append(key)
+        return ProviderConfig(
+            name="tag",
+            provider=ProviderKind.DEEPSEEK if key else ProviderKind.NOT_CONFIGURED,
+            configured=bool(key),
+            credential_env="DEEPSEEK_API_KEY",
+            disclosure="deepseek may suggest tags, but final prompts are produced by the local Danbooru compiler.",
+        )
+    if provider == "mimo":
+        key = os.environ.get("MIMO_API_KEY", "")
+        secrets.append(key)
+        return ProviderConfig(
+            name="tag",
+            provider=ProviderKind.MIMO if key else ProviderKind.NOT_CONFIGURED,
+            configured=bool(key),
+            credential_env="MIMO_API_KEY",
+            disclosure="mimo may suggest tags, but final prompts are produced by the local Danbooru compiler.",
         )
     return ProviderConfig(
         name="tag",

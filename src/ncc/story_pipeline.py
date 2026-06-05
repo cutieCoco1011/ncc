@@ -344,7 +344,7 @@ def _setting_for_event(event: str) -> str:
         (("전차", "정류장", "골목"), "rainy old tram stop and narrow alley"),
     ]
     for keywords, setting in setting_keywords:
-        if any(keyword in event for keyword in keywords):
+        if any(_keyword_present(keyword, event) for keyword in keywords):
             return setting
     return "Korean urban fantasy scene"
 
@@ -366,7 +366,7 @@ def _composition_for_event(event: str, setting: str, order: int) -> str:
         ("괴물", "shadow creature looming over memory light"),
     ]
     for keyword, motif in motifs:
-        if keyword in event:
+        if _keyword_present(keyword, event):
             return f"{setting}, {motif}, protagonist clearly visible, readable webtoon panel"
     if order == 1:
         return f"{setting}, object discovery foreground, protagonist clearly visible, readable webtoon panel"
@@ -396,15 +396,38 @@ def _dialogue_for_event(event: str, order: int) -> str:
 
 
 def _caption_for_event(event: str) -> str:
-    if "바닷가" in event:
+    if _keyword_present("바닷가", event):
         return "겨울 바닷가, 낡은 우체통."
-    if "지하철" in event:
+    if _keyword_present("지하철", event):
         return "막차가 끊긴 지하철역."
-    if "도서관" in event:
+    if _keyword_present("도서관", event):
         return "새벽 도서관, 조용한 서가."
-    if "문구점" in event:
+    if _keyword_present("문구점", event):
         return "새벽 문구점의 불빛."
     return "이야기가 시작된 밤."
+
+
+def _keyword_present(keyword: str, text: str) -> bool:
+    return any(
+        not _korean_keyword_negated(text, match.span())
+        for match in re.finditer(re.escape(keyword), text)
+    )
+
+
+def _korean_keyword_negated(text: str, span: tuple[int, int]) -> bool:
+    start, end = span
+    before = text[max(0, start - 32):start]
+    after = text[end:min(len(text), end + 32)]
+    if re.search(r"(?:없는|없이|아닌|제외한|빼고)\s*$", before):
+        return True
+    return (
+        re.match(
+            r"\s*(?:[은는이가을를와과에의로도만]\s*){0,2}"
+            r"(?:아닌|아니다|아니고|아니며|아니지만|없(?:는|다|고|어|어서|지만)?|없이|말고|제외)",
+            after,
+        )
+        is not None
+    )
 
 
 def _dedupe(values: list[str]) -> list[str]:

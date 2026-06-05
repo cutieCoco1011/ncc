@@ -7,45 +7,25 @@ from .models import (
     PanelSpecSet,
     PromptIR,
     PromptIRSet,
-    TagCandidate,
 )
+from .tags import StaticMockTagProvider, TagProvider
 
 
-class StaticTagProvider:
-    def tags_for_panel(self, panel_id: str, beat: str, emotion: str) -> list[TagCandidate]:
-        base_tags = [
-            ("vertical webtoon panel", 0.99),
-            ("cinematic composition", 0.88),
-            ("dramatic lighting", 0.8),
-            (emotion, 0.72),
-        ]
-        keyword_tags = [
-            (("비", "빗", "폭풍"), "rain", 0.86),
-            (("괴물", "그림자", "monster"), "shadow creature", 0.82),
-            (("전차", "정류장"), "tram stop", 0.85),
-            (("도서관", "서가", "책"), "library", 0.84),
-            (("열쇠",), "silver key", 0.82),
-            (("별", "천문도"), "starlight", 0.82),
-            (("지하철", "승강장", "플랫폼"), "subway station", 0.84),
-            (("사탕",), "glowing candy", 0.8),
-            (("바닷가", "파도", "방파제"), "winter seaside", 0.84),
-            (("등대",), "lighthouse", 0.84),
-            (("엽서", "우체통"), "postcard", 0.8),
-            (("우산",), "umbrella", 0.8),
-            (("문구점", "잉크"), "stationery shop", 0.8),
-        ]
-        for keywords, tag, confidence in keyword_tags:
-            if any(keyword in beat for keyword in keywords):
-                base_tags.append((tag, confidence))
-        return [
-            TagCandidate(tag=tag, source="static-mock", confidence=confidence, provenance={"panel_id": panel_id})
-            for tag, confidence in base_tags
-        ]
+LOCAL_BASE_PROMPT_TOKENS = [
+    "anime_webtoon_illustration",
+    "full_color_comic_panel",
+    "clear_readable_scene",
+    "balanced_lighting",
+    "protagonist_clearly_visible",
+    "single_protagonist_only",
+    "consistent_character_design",
+    "clean_webtoon_background",
+]
 
 
 class PromptCompiler:
-    def __init__(self, tag_provider: StaticTagProvider | None = None) -> None:
-        self.tag_provider = tag_provider or StaticTagProvider()
+    def __init__(self, tag_provider: TagProvider | None = None) -> None:
+        self.tag_provider = tag_provider or StaticMockTagProvider()
 
     def build_prompt_ir(
         self,
@@ -56,7 +36,9 @@ class PromptCompiler:
         character_by_id = {character.character_id: character for character in characters.characters}
         prompts: list[PromptIR] = []
         for panel in panel_specs.panels:
-            tag_candidates = self.tag_provider.tags_for_panel(panel.panel_id, panel.beat, panel.emotion)
+            provider_name = getattr(self.tag_provider, "provider_name", "mock")
+            tag_source = panel.beat if provider_name == "mock" else _panel_tag_source_text(panel)
+            tag_candidates = self.tag_provider.tags_for_panel(panel.panel_id, tag_source, panel.emotion)
             character_prompts: dict[str, list[str]] = {}
             character_undesired: dict[str, list[str]] = {}
             for character_id in panel.visible_character_ids:
@@ -68,22 +50,7 @@ class PromptCompiler:
                 character_prompts[character_id] = [tag for tag in positive if tag not in forbidden]
                 character_undesired[character_id] = forbidden
             base_prompt = _dedupe(
-                [
-                    "anime webtoon illustration",
-                    "full color comic panel",
-                    "clear readable scene",
-                    "balanced lighting",
-                    "protagonist clearly visible",
-                    "single protagonist only",
-                    "consistent character design",
-                    panel.setting,
-                    panel.camera,
-                    panel.composition,
-                    panel.emotion,
-                    "clean webtoon background",
-                    "no rendered text",
-                ]
-                + [candidate.tag for candidate in tag_candidates]
+                _base_prompt_tokens(panel, tag_candidates, provider_name)
             )
             prompts.append(
                 PromptIR(
@@ -158,3 +125,41 @@ def _dedupe(values: list[str]) -> list[str]:
             seen.add(key)
             result.append(normalized)
     return result
+
+
+def _panel_tag_source_text(panel) -> str:
+    return "\n".join(
+        value
+        for value in [
+            panel.beat,
+            panel.setting,
+            panel.camera,
+            panel.composition,
+            panel.emotion,
+        ]
+        if value
+    )
+
+
+def _base_prompt_tokens(panel, tag_candidates, provider_name: str) -> list[str]:
+    if provider_name == "mock":
+        return [
+            "anime webtoon illustration",
+            "full color comic panel",
+            "clear readable scene",
+            "balanced lighting",
+            "protagonist clearly visible",
+            "single protagonist only",
+            "consistent character design",
+            panel.setting,
+            panel.camera,
+            panel.composition,
+            panel.emotion,
+            "clean webtoon background",
+            "no rendered text",
+            *[candidate.tag for candidate in tag_candidates],
+        ]
+    return [
+        *LOCAL_BASE_PROMPT_TOKENS,
+        *[candidate.tag for candidate in tag_candidates],
+    ]

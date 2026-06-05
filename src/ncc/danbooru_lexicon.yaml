@@ -1,0 +1,200 @@
+canonical_tags:
+  vertical_webtoon_panel:
+    category: style
+    aliases: ["vertical webtoon panel", "webtoon panel"]
+  anime_webtoon_illustration:
+    category: style
+    aliases: ["anime webtoon illustration"]
+  full_color_comic_panel:
+    category: style
+    aliases: ["full color comic panel"]
+  cinematic_composition:
+    category: style
+    aliases: ["cinematic composition"]
+  dramatic_lighting:
+    category: style
+    aliases: ["dramatic lighting"]
+  balanced_lighting:
+    category: style
+    aliases: ["balanced lighting"]
+  clean_webtoon_background:
+    category: style
+    aliases: ["clean webtoon background"]
+  clear_readable_scene:
+    category: style
+    aliases: ["clear readable scene"]
+  protagonist_clearly_visible:
+    category: composition
+    aliases: ["protagonist clearly visible"]
+  single_protagonist_only:
+    category: character_control
+    aliases: ["single protagonist only"]
+  consistent_character_design:
+    category: character_control
+    aliases: ["consistent character design"]
+  yellow_raincoat:
+    category: outfit
+    aliases: ["yellow raincoat", "노란 우비", "黄色いレインコート"]
+  blue_sneakers:
+    category: outfit
+    aliases: ["blue sneakers", "파란 운동화"]
+  white_gloves:
+    category: outfit
+    aliases: ["white gloves", "하얀 장갑"]
+  red_scarf:
+    category: outfit
+    aliases: ["red scarf", "붉은 목도리"]
+  navy_winter_coat:
+    category: outfit
+    aliases: ["navy winter coat"]
+  teal_winter_coat:
+    category: outfit
+    aliases: ["teal winter coat"]
+  dark_skirt:
+    category: outfit
+    aliases: ["dark skirt"]
+  white_shirt:
+    category: outfit
+    aliases: ["white shirt"]
+  distinct_outfit:
+    category: outfit
+    aliases: ["distinct outfit"]
+  short_black_hair:
+    category: hair
+    aliases: ["short black hair", "short black bob hair"]
+  short_brown_hair:
+    category: hair
+    aliases: ["short brown hair", "short brown bob hair"]
+  short_dark_hair:
+    category: hair
+    aliases: ["short dark hair", "short dark bob hair"]
+  round_glasses:
+    category: accessory
+    aliases: ["round glasses"]
+  cat_brooch:
+    category: accessory
+    aliases: ["cat brooch", "glowing cat brooch", "고양이 브로치", "猫のブローチ", "猫ブローチ"]
+  brooch:
+    category: accessory
+    aliases: ["brooch", "glowing brooch", "brooch light", "brooch light burst", "브로치", "ブローチ"]
+  expressive_dark_eyes:
+    category: face
+    aliases: ["expressive dark eyes"]
+  korean_teenage_girl:
+    category: character
+    aliases: ["Korean teenage girl", "korean teenage girl"]
+  child:
+    category: character
+    aliases: ["child"]
+  winter_seaside:
+    category: setting
+    aliases: ["winter seaside", "바닷가", "방파제", "파도", "冬の海辺", "海辺"]
+    negation_vetoes: ["lighthouse"]
+  tram_stop:
+    category: setting
+    aliases: ["tram stop", "old tram stop", "전차 정류장", "정류장", "전차", "電車の停留所", "停留所"]
+  tram:
+    category: vehicle
+    aliases: ["tram", "streetcar", "first tram", "arriving tram", "전차", "첫 전차", "電車", "路面電車"]
+  narrow_alley:
+    category: setting
+    aliases: ["narrow alley", "alley", "골목", "路地", "狭い路地"]
+  subway_station:
+    category: setting
+    aliases: ["subway station", "지하철", "승강장", "플랫폼"]
+  library:
+    category: setting
+    aliases: ["library", "도서관", "서가", "책"]
+  lighthouse:
+    category: setting
+    aliases: ["lighthouse", "등대", "灯台"]
+  stationery_shop:
+    category: setting
+    aliases: ["stationery shop", "문구점"]
+  rain:
+    category: atmosphere
+    aliases: ["rain", "rainy", "비", "빗속", "빗", "폭풍", "雨"]
+  blue_station_display:
+    category: prop
+    aliases: ["blue station display", "station display", "blue display board", "전광판", "푸른 전광판", "青い駅の表示板", "駅の表示板", "表示板"]
+  memory_light:
+    category: atmosphere
+    aliases: ["memory light", "memory glow", "기억의 빛", "記憶の光"]
+  starlight:
+    category: atmosphere
+    aliases: ["starlight", "별", "천문도"]
+  shadow_creature:
+    category: creature
+    aliases: ["shadow creature", "shadow monster", "괴물", "그림자", "monster", "影の怪物", "影のモンスター"]
+  postcard:
+    category: prop
+    aliases: ["postcard", "post card", "엽서", "우체통", "はがき"]
+  silver_key:
+    category: prop
+    aliases: ["silver key", "열쇠"]
+  glowing_candy:
+    category: prop
+    aliases: ["glowing candy", "사탕"]
+  umbrella:
+    category: prop
+    aliases: ["umbrella", "우산"]
+  umbrella_prop:
+    category: prop
+    aliases: ["umbrella prop"]
+  silver_key_prop:
+    category: prop
+    aliases: ["silver key prop"]
+  postcard_prop:
+    category: prop
+    aliases: ["postcard prop"]
+  glowing_candy_prop:
+    category: prop
+    aliases: ["glowing candy prop"]
+  starlight_ink_bottle_prop:
+    category: prop
+    aliases: ["starlight ink bottle prop", "잉크"]
+  story_prop:
+    category: prop
+    aliases: ["story prop", "story-specific prop"]
+  determined_expression:
+    category: expression
+    aliases: ["determined expression", "결심"]
+  dynamic_pose:
+    category: pose
+    aliases: ["dynamic pose"]
+  wet_hair:
+    category: hair
+    aliases: ["wet hair"]
+  rain_droplets:
+    category: atmosphere
+    aliases: ["rain droplets"]
+  speech_bubble_text:
+    category: forbidden_text
+    aliases: ["speech bubble text", "text in image"]
+  text:
+    category: forbidden_text
+    aliases: ["text"]
+  watermark:
+    category: forbidden_text
+    aliases: ["watermark"]
+  logo:
+    category: forbidden_text
+    aliases: ["logo"]
+positive_blocklist:
+  - speech_bubble_text
+  - text
+  - watermark
+  - logo
+negative_defaults:
+  - speech_bubble_text
+  - text
+  - watermark
+  - logo
+  - bad_hands
+  - extra_fingers
+  - low_contrast
+  - missing_protagonist
+required_categories:
+  - hair
+  - outfit
+  - setting

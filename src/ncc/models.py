@@ -53,6 +53,8 @@ class ProviderKind(str, Enum):
     MOCK = "mock"
     OPENAI = "openai"
     OPENROUTER = "openrouter"
+    DEEPSEEK = "deepseek"
+    MIMO = "mimo"
     NOVELAI = "novelai"
     LOCAL = "local"
     NOT_CONFIGURED = "not_configured"

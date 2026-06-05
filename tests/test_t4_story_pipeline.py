@@ -58,6 +58,20 @@ def test_story_pipeline_keeps_story_setting_after_location_keywords_drop_out() -
     assert bundle.panel_specs.panels[3].setting == "winter seaside, breakwater, and lighthouse"
 
 
+def test_story_pipeline_does_not_use_negated_location_keywords_as_setting() -> None:
+    source = (
+        "비 오는 전차 정류장에서 하린은 고양이 브로치를 발견했다. "
+        "브로치가 빛나자 푸른 전광판이 켜지고 골목 끝에서 그림자 괴물이 나타났다. "
+        "바닷가는 아니다."
+    )
+
+    bundle = MockLLMStoryProvider().analyze("negated seaside", source, panel_count=4)
+
+    assert all("winter seaside" not in panel.setting for panel in bundle.panel_specs.panels)
+    assert all("lighthouse" not in panel.composition for panel in bundle.panel_specs.panels)
+    assert all("바닷가" not in panel.caption for panel in bundle.storyboard.panels)
+
+
 def test_non_default_primary_character_gets_stable_visual_lock_traits() -> None:
     source = (
         "새벽 도서관에서 지우는 반납함 뒤에 떨어진 은색 열쇠를 발견했다. "

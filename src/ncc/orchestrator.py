@@ -26,6 +26,7 @@ from .qa import CandidateQAService, SelectionService
 from .settings import AppSettings
 from .storage import ProjectContext, ProjectStorage
 from .story_pipeline import MockLLMStoryProvider, panel_specs_from_storyboard
+from .tags import LocalDanbooruTagProvider, OpenAICompatibleTagCandidateExtractor, StaticMockTagProvider
 
 
 class InvalidArtifactError(RuntimeError):
@@ -96,7 +97,7 @@ class NccOrchestrator:
         self.require_valid(context.manifest, "panel_specs")
         characters = self.storage.read_model(context.project_dir, "characters", CharacterBible)
         panel_specs = self.storage.read_model(context.project_dir, "panel_specs", PanelSpecSet)
-        compiler = PromptCompiler()
+        compiler = PromptCompiler(tag_provider=self._tag_provider())
         prompt_ir = compiler.build_prompt_ir(project_id, panel_specs, characters)
         nai_prompts = compiler.compile_nai_prompts(project_id, prompt_ir)
         self.storage.write_model(context.project_dir, "prompt_ir", prompt_ir)
@@ -120,6 +121,10 @@ class NccOrchestrator:
         run = self.begin_stage("images")
         context = self.open_project(project_id)
         self.require_valid(context.manifest, "nai_prompts")
+        if self.settings.image.provider == ProviderKind.NOVELAI and self.settings.tag.provider == ProviderKind.MOCK:
+            raise ValueError(
+                "real NovelAI image generation requires NCC_TAG_PROVIDER=local or a model-assisted provider passing through the local Danbooru compiler"
+            )
         if self.settings.image.provider == ProviderKind.NOT_CONFIGURED:
             raise ValueError("image provider is not_configured; set NCC_IMAGE_PROVIDER=mock or configure NOVELAI_API_TOKEN")
         nai_prompts = self.storage.read_model(context.project_dir, "nai_prompts", NAIPromptSet)
@@ -138,6 +143,24 @@ class NccOrchestrator:
         if self.settings.image.provider == ProviderKind.NOVELAI:
             return NovelAIImageBackend(api_token=os.environ.get("NOVELAI_API_TOKEN", ""))
         raise ValueError(f"unsupported image provider: {self.settings.image.provider.value}")
+
+    def _tag_provider(self) -> StaticMockTagProvider | LocalDanbooruTagProvider:
+        if self.settings.tag.provider == ProviderKind.MOCK:
+            return StaticMockTagProvider()
+        if self.settings.tag.provider == ProviderKind.LOCAL:
+            return LocalDanbooruTagProvider()
+        if self.settings.tag.provider in {ProviderKind.OPENAI, ProviderKind.DEEPSEEK, ProviderKind.MIMO}:
+            provider_name = self.settings.tag.provider.value
+            extra_extractors = []
+            if os.environ.get("NCC_TAG_SUGGESTION_MODE", "").lower() in {"1", "true", "external", "on"}:
+                extra_extractors.append(OpenAICompatibleTagCandidateExtractor.from_env(provider_name))
+            return LocalDanbooruTagProvider(
+                suggestion_provider_name=provider_name,
+                extra_extractors=extra_extractors,
+            )
+        if self.settings.tag.provider == ProviderKind.NOT_CONFIGURED:
+            raise ValueError("tag provider is not_configured; set NCC_TAG_PROVIDER=mock, local, deepseek, openai, or mimo")
+        raise ValueError(f"unsupported tag provider: {self.settings.tag.provider.value}")
 
     def run_qa_stage(self, project_id: str) -> StageRun:
         run = self.begin_stage("qa")

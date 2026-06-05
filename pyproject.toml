@@ -25,10 +25,14 @@ dev = [
 
 [project.scripts]
 ncc-api = "ncc.api:run"
+ncc-compile-prompt = "ncc.prompt_lab:main"
 ncc-novelai-smoke = "ncc.real_smoke:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ncc = ["danbooru_lexicon.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -16,10 +16,13 @@ def test_project_storage_creates_expected_layout(tmp_path: Path, monkeypatch: py
 
     assert (context.project_dir / "project.yaml").exists()
     assert (context.project_dir / "source.md").read_text(encoding="utf-8").startswith("하린")
-    assert (context.project_dir / "images").is_dir()
+    assert not (context.project_dir / "images").exists()
     assert (context.project_dir / "lettering").is_dir()
     assert (context.project_dir / "exports").is_dir()
     assert context.manifest.artifact_status["analysis"].value == "missing"
+    image_path = storage.write_bytes(context.project_dir, "images/p1_candidate_1.png", b"png")
+    assert image_path == context.project_dir / "images" / "p1_candidate_1.png"
+    assert (context.project_dir / "images").is_dir()
 
 
 def test_artifact_write_roundtrip_and_rerun(tmp_path: Path) -> None:
