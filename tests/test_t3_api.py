@@ -259,6 +259,25 @@ def test_api_prompt_dry_run_with_local_tags_does_not_generate_images(
     assert first_tag["provenance"]["provider"] == "local"
 
 
+def test_prompt_stage_refreshes_provider_disclosures_for_existing_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "mock")
+    mock_orchestrator = NccOrchestrator(tmp_path)
+    context = mock_orchestrator.create_project("disclosure", "하린이 정류장에 선다.")
+    mock_orchestrator.run_story_stage(context.project_id)
+    mock_disclosures = mock_orchestrator.open_project(context.project_id).manifest.external_disclosures
+    assert any("Mock tag generation" in disclosure for disclosure in mock_disclosures)
+
+    monkeypatch.setenv("NCC_TAG_PROVIDER", "local")
+    local_orchestrator = NccOrchestrator(tmp_path)
+    local_orchestrator.run_prompt_stage(context.project_id)
+
+    manifest = local_orchestrator.open_project(context.project_id).manifest
+    assert any("Local Danbooru compiler" in disclosure for disclosure in manifest.external_disclosures)
+    assert not any("Mock tag generation" in disclosure for disclosure in manifest.external_disclosures)
+
+
 def test_api_prompt_dry_run_with_deepseek_tags_still_uses_local_compiler(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

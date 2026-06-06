@@ -77,11 +77,7 @@ class ProjectStorage:
                 "lettering": ArtifactStatus.MISSING,
                 "export": ArtifactStatus.MISSING,
             },
-            external_disclosures=[
-                self.settings.llm.disclosure,
-                self.settings.tag.disclosure,
-                self.settings.image.disclosure,
-            ],
+            external_disclosures=self._current_external_disclosures(),
         )
         self.write_source(project_dir, source_text)
         self.write_model(project_dir, "project", manifest)
@@ -136,6 +132,7 @@ class ProjectStorage:
         manifest = self.read_model(project_dir, "project", ProjectManifest)
         for artifact in artifact_names:
             manifest.artifact_status[artifact] = ArtifactStatus.INVALID
+        manifest.external_disclosures = self._current_external_disclosures()
         manifest.updated_at = utc_now()
         dump_model(manifest, self.artifact_path(project_dir, "project"))
         return manifest
@@ -146,8 +143,16 @@ class ProjectStorage:
             return
         manifest = load_model(manifest_path, ProjectManifest)
         manifest.artifact_status[artifact_name] = status
+        manifest.external_disclosures = self._current_external_disclosures()
         manifest.updated_at = utc_now()
         dump_model(manifest, manifest_path)
+
+    def _current_external_disclosures(self) -> list[str]:
+        return [
+            self.settings.llm.disclosure,
+            self.settings.tag.disclosure,
+            self.settings.image.disclosure,
+        ]
 
 
 def _project_id(title: str, source_hash: str) -> str:
